@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">	
+		<title> Crack Overflow </title>
+ 		<link rel="stylesheet" href="/assets/css/main.css">			
+	</head>
+	<body>
+	<nav class="header-nav">
+		<div class="header-nav-left">
+			<a href="/" id="nav-logo-link">  
+				<span id="nav-logo-text">CRACK OVERFLOW</span>  
+			</a>	
+		</div>
+		<div class="header-nav-right">
+    	{{ if .UserCred.IsLogIn }}
+			<form action="/logout" method="post" id="header-logout-form">
+				<button type="submit" class="header-btn-link" id="">
+					LOG OUT
+				</button>          
+			</form>      
+		{{ else }}   
+			<a class="header-auth-links" id="header-signup-link">
+				SIGN UP
+			</a>
+			<a class="header-auth-links" id="header-login-link">
+				LOG IN
+			</a>
+		{{ end }}                       
+		</div>
+	</nav>		
+	<section id="splash_header"> 
+	  <h1 id="splash_logo_text" class="">Video Pipeline</h1>
+	  <h5 id="splash_logo_tagline" class="">A Computer Vision Application</h5>
+	  <button id="home-become-btn" class="" style="color:white;">
+	    Sign Up
+	  </button>
+	  <button id="home-login-btn" class="" style="color:black;">
+	    Log In
+	  </button>   	                  
+	</section>
+	</body>
+</html>
