@@ -1,8 +1,13 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
+	"github.com/comebacknader/vidpipe/config"
+	"github.com/comebacknader/vidpipe/handlers"
+	"github.com/comebacknader/vidpipe/models"
 	"github.com/julienschmidt/httprouter"
+	_ "github.com/lib/pq"
 	"html/template"
 	"log"
 	"net/http"
@@ -11,14 +16,24 @@ import (
 var tpl *template.Template
 
 func init() {
-	tpl = template.Must(template.ParseGlob("templates/*"))
+	tpl = config.Tpl
 }
 
 func main() {
 
 	mux := httprouter.New()
 
+	config.NewDB("postgres://" + os.Getenv("VIDPIPE_DB_U") +
+		"@" + os.Getenv("VIDPIPE_HOST") + "/" + os.Getenv("VIDPIPE_DB_NAME") + "?sslmode=disable")
+
 	mux.GET("/", index)
+
+	// Handlers for Authentication
+	mux.GET("/signup", handlers.GetSignup)
+	mux.POST("/signup", handlers.PostSignup)
+	mux.GET("/login", handlers.GetLogin)
+	mux.POST("/login", handlers.PostLogin)
+	mux.POST("/logout", handlers.PostLogout)
 
 	// Serves the css files called by HTML files
 	mux.ServeFiles("/assets/css/*filepath", http.Dir("assets/css/"))
