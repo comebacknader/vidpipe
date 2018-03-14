@@ -23,7 +23,7 @@
       </div>      
     </nav>    
     <section id="signup_header"> 
-      <h3 class="auth-page-tagline">Log In</h3>
+      <h3 class="auth-page-tagline">Sign Up</h3>
       {{ if .Error }}
       <div class="auth-errors">
         <ul>
@@ -34,12 +34,16 @@
       </div>
       {{end}}
       <div class="auth-box">
-        <form method="post" action="/signup" id="">                     
+        <form method="post" action="/signup" id="">
+          <input label="First Name" placeholder="First Name" name="firstname" 
+            type="text" class="form-input" />
+          <input label="Last Name" placeholder="Last Name" name="lastname" 
+            type="text" class="form-input" />                      
           <input label="Username" placeholder="Username" name="username" 
             type="text" class="form-input" />
           <input label="Password" placeholder="Password" name="password"
              type="password" class="form-input" />
-          <button type="submit" class="form-btn">Log In</button>
+          <button type="submit" class="form-btn">Sign up</button>
         </form>
       </div>   
     </section>

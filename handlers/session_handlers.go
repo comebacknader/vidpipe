@@ -1,20 +1,27 @@
 package handlers
 
 import (
-	"database/sql"
+	_ "database/sql"
 	"github.com/comebacknader/vidpipe/config"
-	"github.com/comebacknader/vidpipe/models"
+	_ "github.com/comebacknader/vidpipe/models"
 	"github.com/julienschmidt/httprouter"
-	"github.com/satori/go.uuid"
-	"golang.org/x/crypto/bcrypt"
+	_ "github.com/satori/go.uuid"
+	_ "golang.org/x/crypto/bcrypt"
+	"html/template"
 	"net/http"
-	"os"
-	"time"
+	_ "os"
+	_ "time"
 )
+
+var tpl *template.Template
+
+func init() {
+	tpl = config.Tpl
+}
 
 // Data passed to all pages dealing with Sessions
 type SessionData struct {
-	UserCred UserStatus
+	IsLogIn  bool
 	CurrUser string
 	Error    []string
 	Success  string
@@ -28,7 +35,7 @@ func GetLogin(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 	} else {
 		seshData := SessionData{}
-		seshData.UserCred.IsLogIn = false
+		seshData.IsLogIn = false
 		err := tpl.ExecuteTemplate(w, "login.gohtml", seshData)
 		config.HandleError(w, err)
 	}
@@ -42,7 +49,7 @@ func GetSignup(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 	} else {
 		seshData := SessionData{}
-		seshData.UserCred.IsLogIn = false
+		seshData.IsLogIn = false
 		err := tpl.ExecuteTemplate(w, "signup.gohtml", seshData)
 		config.HandleError(w, err)
 	}

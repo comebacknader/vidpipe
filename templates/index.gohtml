@@ -21,7 +21,7 @@
 				</button>          
 			</form>      
 		{{ else }}   
-			<a class="header-auth-links" id="header-signup-link">
+			<a href="/signup" class="header-auth-links" id="header-signup-link">
 				SIGN UP
 			</a>
 			<a class="header-auth-links" id="header-login-link">
@@ -33,12 +33,16 @@
 	<section id="splash_header"> 
 	  <h1 id="splash_logo_text" class="">Video Pipeline</h1>
 	  <h5 id="splash_logo_tagline" class="">A Computer Vision Application</h5>
-	  <button id="home-become-btn" class="" style="color:white;">
-	    Sign Up
-	  </button>
-	  <button id="home-login-btn" class="" style="color:black;">
-	    Log In
-	  </button>   	                  
+	  <form action="/signup">
+	    <button id="home-become-btn" class="" style="color:white;">
+	      Sign Up 
+	    </button>
+	  </form>
+	  <form action="/login">
+		  <button id="home-login-btn" class="" style="color:black;">
+		    Log In
+		  </button>
+	  </form>   	                  
 	</section>
 	</body>
 </html>
