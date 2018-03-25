@@ -13,21 +13,13 @@
 				<span id="nav-logo-text">CRACK OVERFLOW</span>  
 			</a>	
 		</div>
-		<div class="header-nav-right">
-    	{{ if .UserCred.IsLogIn }}
-			<form action="/logout" method="post" id="header-logout-form">
-				<button type="submit" class="header-btn-link" id="">
-					LOG OUT
-				</button>          
-			</form>      
-		{{ else }}   
+		<div class="header-nav-right">  
 			<a href="/signup" class="header-auth-links" id="header-signup-link">
 				SIGN UP
 			</a>
-			<a class="header-auth-links" id="header-login-link">
+			<a href="/login" class="header-auth-links" id="header-login-link">
 				LOG IN
-			</a>
-		{{ end }}                       
+			</a>                   
 		</div>
 	</nav>		
 	<section id="splash_header"> 

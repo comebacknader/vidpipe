@@ -9,7 +9,7 @@ import (
 var Tpl *template.Template
 
 func init() {
-	Tpl = template.Must(template.ParseGlob("templates/*"))
+	Tpl = template.Must(template.ParseFiles("ngApp/dist/index.html"))
 }
 
 // HandleError :  A generic error handler.

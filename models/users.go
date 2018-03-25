@@ -3,15 +3,16 @@ package models
 import (
 	"database/sql"
 	"github.com/comebacknader/vidpipe/config"
-	_ "time"
+	"time"
 )
 
 type User struct {
 	ID        int    `json:"id,omitempty"`
 	Username  string `json:"username,omitempty"`
-	Email     string `json:"email,omitempty"`
+	Firstname string
+	Lastname  string
 	Hash      string `json:"password,omitempty"`
-	LastLogin string
+	LastLogin time.Time
 	Ip        string
 }
 
@@ -28,4 +29,44 @@ func UserExistById(uid int) bool {
 		panic(err)
 	}
 	return true
+}
+
+// Check if a User exists with supplied Username
+// Return true if exists, false otherwise
+func CheckUserName(usr string) bool {
+	user := User{}
+	err := config.DB.QueryRow("SELECT id FROM users WHERE username = $1", usr).Scan(&user.Username)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false
+		}
+		panic(err)
+	}
+	return true
+}
+
+// Posts a User to the Database
+func PostUser(usr User) error {
+	_, err := config.DB.
+		Exec("INSERT INTO users (username, firstname, lastname, password, lastlogin, ip) VALUES ($1, $2, $3, $4, $5, $6)",
+			usr.Username, usr.Firstname, usr.Lastname, usr.Hash, usr.LastLogin, usr.Ip)
+	if err != nil {
+		panic(err)
+	}
+	return nil
+}
+
+// GetUserByName gets the user by their username. Return bool if exists.
+func GetUserByName(username string) (User, bool) {
+	usr := User{}
+	err := config.DB.
+		QueryRow("SELECT ID, username, firstname, lastname, password, lastlogin, ip FROM users WHERE username = $1", username).
+		Scan(&usr.ID, &usr.Username, &usr.Firstname, &usr.Lastname, &usr.Hash, &usr.LastLogin, &usr.Ip)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return usr, false
+		}
+		panic(err)
+	}
+	return usr, true
 }

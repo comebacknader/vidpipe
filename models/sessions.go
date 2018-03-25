@@ -35,3 +35,22 @@ func UpdateSessionActivity(uuid string) {
 		panic(err)
 	}
 }
+
+// CreateSession creates a session.
+func CreateSession(usrID int, sID string, activeTime time.Time, ip string) {
+	_, err := config.DB.
+		Exec("INSERT INTO sessions (uuid, user_id, logintime, ip) VALUES ($1, $2, $3, $4)",
+			sID, usrID, activeTime, ip)
+	if err != nil {
+		panic(err)
+	}
+}
+
+// DelSessionByUUID deletes a session by the supplied uuid.
+func DelSessionByUUID(uuid string) {
+	_, err := config.DB.
+		Exec("DELETE FROM sessions WHERE uuid = $1", uuid)
+	if err != nil {
+		panic(err)
+	}
+}

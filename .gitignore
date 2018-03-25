@@ -1,2 +1,41 @@
 runner.conf
 /tmp
+
+
+# ANGULAR APP 
+
+# compiled output
+/ngApp/dist
+/ngApp/dist-server
+/ngApp/tmp
+/ngApp/out-tsc
+
+# dependencies
+/ngApp/node_modules
+
+# IDEs and editors
+/ngApp/.idea
+/ngApp/.project
+/ngApp/.classpath
+/ngApp/.c9/
+/ngApp/*.launch
+/ngApp/.settings/
+/ngApp/*.sublime-workspace
+
+# misc
+/ngApp/.sass-cache
+/ngApp/connect.lock
+/ngApp/coverage
+/ngApp/libpeerconnection.log
+/ngApp/npm-debug.log
+/ngApp/yarn-error.log
+/ngApp/testem.log
+/ngApp/typings
+
+# e2e
+/ngApp/e2e/*.js
+/ngApp/e2e/*.map
+
+# System Files
+/ngApp/.DS_Store
+/ngApp/Thumbs.db
