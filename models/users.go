@@ -9,8 +9,8 @@ import (
 type User struct {
 	ID        int    `json:"id,omitempty"`
 	Username  string `json:"username,omitempty"`
-	Firstname string
-	Lastname  string
+	Firstname string `json:"fname,omitempty"`
+	Lastname  string `json:"lname,omitempty"`
 	Hash      string `json:"password,omitempty"`
 	LastLogin time.Time
 	Ip        string

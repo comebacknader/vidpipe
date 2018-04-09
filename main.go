@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/comebacknader/vidpipe/config"
-	_ "github.com/comebacknader/vidpipe/handlers"
+	"github.com/comebacknader/vidpipe/handlers"
 	_ "github.com/comebacknader/vidpipe/models"
 	"github.com/julienschmidt/httprouter"
 	_ "github.com/lib/pq"
@@ -36,6 +36,10 @@ func main() {
 	mux.GET("/signup", index)
 	mux.GET("/login", index)
 	mux.GET("/watch", index)
+
+	mux.POST("/api/signup/new", handlers.PostSignup)
+	mux.POST("/api/login", handlers.PostLogin)
+	mux.POST("/api/logout", handlers.PostLogout)
 
 	// Serves the css files called by HTML files
 	mux.ServeFiles("/assets/css/*filepath", http.Dir("ngApp/dist/"))
