@@ -1,4 +1,6 @@
 import { Component, OnInit } from '@angular/core';
+import { AuthService } from '../auth.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-watchvid',
@@ -7,9 +9,11 @@ import { Component, OnInit } from '@angular/core';
 })
 export class WatchVidComponent implements OnInit {
 
-  constructor() { }
+  constructor(private auth: AuthService, private router: Router) { }
 
   ngOnInit() {
+  	//this.auth.isAuthenticated();
+  	setTimeout(()=>{ this.auth.isAuthenticated() }, 1000);
   }
 
 }

@@ -40,6 +40,7 @@ func main() {
 	mux.POST("/api/signup/new", handlers.PostSignup)
 	mux.POST("/api/login", handlers.PostLogin)
 	mux.POST("/api/logout", handlers.PostLogout)
+	mux.GET("/api/isLoggedIn", handlers.IsLoggedIn)
 
 	// Serves the css files called by HTML files
 	mux.ServeFiles("/assets/css/*filepath", http.Dir("ngApp/dist/"))

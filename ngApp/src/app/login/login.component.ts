@@ -24,7 +24,10 @@ export class LoginComponent implements OnInit {
   onSubmit() {
     this.auth.loginUser(this.loginForm.value)
       .subscribe(
-        data => this.router.navigate(['watch']),
+        data => { 
+          this.auth.isAuth = true;
+          this.router.navigate(['watch']);
+        },
         error => console.log("Error: " + error)
         );
   }

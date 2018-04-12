@@ -26,6 +26,24 @@ type LoginInfo struct {
 }
 
 // PostSignup signs up a user.
+func IsLoggedIn(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	if r.Method != http.MethodGet {
+		http.Error(w, http.StatusText(405), http.StatusMethodNotAllowed)
+		return
+	}
+
+	loggedIn := AlreadyLoggedIn(r)
+
+	if loggedIn == false {
+		http.Error(w, http.StatusText(405), http.StatusMethodNotAllowed)
+		return
+	}
+	w.WriteHeader(200)
+	return
+
+}
+
+// PostSignup signs up a user.
 func PostSignup(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if r.Method != http.MethodPost {
 		http.Error(w, http.StatusText(405), http.StatusMethodNotAllowed)

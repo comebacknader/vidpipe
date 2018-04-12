@@ -26,7 +26,10 @@ export class SignupComponent implements OnInit {
   onSubmit() {
   	this.auth.signupUser(this.signupForm.value)
   		.subscribe(
-  			data => this.router.navigate(['watch']),
+  			data => { 
+          this.auth.isAuth = true;
+          this.router.navigate(['watch']);
+        },
   			error => console.log("Error: " + error)
   			);
   }
