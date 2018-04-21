@@ -70,3 +70,18 @@ func GetUserByName(username string) (User, bool) {
 	}
 	return usr, true
 }
+
+// GetUsernameById gets the user by their user ID. Return bool if exists.
+func GetUsernameById(uid int) (string, bool) {
+	usr := User{}
+	err := config.DB.
+		QueryRow("SELECT username FROM users WHERE ID = $1", uid).
+		Scan(&usr.Username)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", false
+		}
+		panic(err)
+	}
+	return (usr.Username), true
+}

@@ -18,10 +18,11 @@ export class LoginComponent implements OnInit {
   	this.loginForm = new FormGroup({
   		'username': new FormControl(null),
   		'password': new FormControl(null)
-  	})
+  	});
   }
 
   onSubmit() {
+    this.auth.username = this.loginForm.value.username;
     this.auth.loginUser(this.loginForm.value)
       .subscribe(
         data => { 

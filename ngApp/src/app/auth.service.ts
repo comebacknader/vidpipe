@@ -9,6 +9,7 @@ export class AuthService {
 	logoutURL = 'http://localhost:8080/api/logout';
 	isAuthURL = 'http://localhost:8080/api/isLoggedIn';
 	isAuth = false;
+	username = '';
 
 	constructor(private http: HttpClient, private router: Router) {}
 
@@ -21,22 +22,45 @@ export class AuthService {
 	}
 
 	logoutUser() {
+		this.username = '';
 		return this.http.post(this.logoutURL, null);
 	}
 
 	checkAuth() {
 		this.http.get(this.isAuthURL).subscribe(data => {
 			this.isAuth = true;
+			this.username = data['username'];
 		}, error => {
 			this.isAuth = false;
 		});		
 	}
 
 	isAuthenticated() {
-		// This is an async call
-		if (this.isAuth) { return true; }
+		// Check the cookie, for a session
+		//var cookie = this.getCookie("session");
+		//if (cookie != "") return true; 
+		if (this.isAuth) return true;
 		this.router.navigate(['/']);
 		return false;		
 	}
+
+	 getCookie(cname) {
+	    var name = cname + "=";
+	    var ca = document.cookie.split(';');
+	    for(var i = 0; i < ca.length; i++) {
+	        var c = ca[i];
+	        while (c.charAt(0) == ' ') {
+	            c = c.substring(1);
+	        }
+	        if (c.indexOf(name) == 0) {
+	            return c.substring(name.length, c.length);
+	        }
+	    }
+	    return "";
+		}
+
+	getUsername() {
+		return this.username;
+	}	
 
 }

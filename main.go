@@ -41,15 +41,19 @@ func main() {
 	mux.POST("/api/login", handlers.PostLogin)
 	mux.POST("/api/logout", handlers.PostLogout)
 	mux.GET("/api/isLoggedIn", handlers.IsLoggedIn)
+	mux.POST("/api/upload", handlers.UploadVid)
 
 	// Serves the css files called by HTML files
-	mux.ServeFiles("/assets/css/*filepath", http.Dir("ngApp/dist/"))
+	mux.ServeFiles("/assets/css/*filepath", http.Dir("ngApp/dist"))
 
 	// Serves the javascript files called by HTML files
-	mux.ServeFiles("/assets/js/*filepath", http.Dir("ngApp/dist/"))
+	mux.ServeFiles("/assets/js/*filepath", http.Dir("ngApp/dist"))
 
 	// Serves the images called by HTML files
 	mux.ServeFiles("/assets/img/*filepath", http.Dir("assets/img/"))
+
+	// Serve video files
+	mux.ServeFiles("/assets/vid/*filepath", http.Dir("assets/vid/"))
 
 	mux.NotFound = http.RedirectHandler("/", 301)
 

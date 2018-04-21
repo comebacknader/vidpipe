@@ -25,20 +25,25 @@ type LoginInfo struct {
 	Password string `json:"password,omitempty"`
 }
 
-// PostSignup signs up a user.
+// IsLoggedIn checks if User is signed in.
 func IsLoggedIn(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if r.Method != http.MethodGet {
 		http.Error(w, http.StatusText(405), http.StatusMethodNotAllowed)
 		return
 	}
 
-	loggedIn := AlreadyLoggedIn(r)
+	usrname, loggedIn := AlreadyLoggedIn(r)
 
 	if loggedIn == false {
 		http.Error(w, http.StatusText(405), http.StatusMethodNotAllowed)
 		return
 	}
-	w.WriteHeader(200)
+	// Get the username from session value
+	// Write the username back to the client in a json object
+	lgInfo := LoginInfo{}
+	lgInfo.Username = usrname.(string)
+	fmt.Println("username: " + lgInfo.Username)
+	json.NewEncoder(w).Encode(&lgInfo)
 	return
 
 }
