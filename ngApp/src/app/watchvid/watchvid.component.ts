@@ -25,6 +25,7 @@ export class WatchVidComponent implements OnInit {
   }
 
   onSubmit() {
+    this.uploadVidForm.get('username').setValue(this.auth.username); 
     this.http.post('http://localhost:8080/api/upload', this.uploadVidForm.value).subscribe(
       data => console.log('Successful.'), error => console.log('Error')
       );
