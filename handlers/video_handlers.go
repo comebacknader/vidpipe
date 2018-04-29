@@ -9,6 +9,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -45,7 +46,7 @@ func UploadVid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	vidEnc, _ := b64.StdEncoding.DecodeString(vid.VideoEnc)
 
 	pathVid := vidUrl + usrnm
-	err := ioutil.WriteFile(pathVid, vidEnc, 0644)
+	err := ioutil.WriteFile(pathVid+".mp4", vidEnc, 0644)
 	if err != nil {
 		fmt.Println("Error writing to file : " + err.Error())
 		return
@@ -58,22 +59,19 @@ func UploadVid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		fmt.Println("Error: ", err)
 		return
 	}
-	fmt.Println(string(cmdOut))
 	num, err := strconv.Atoi(strings.TrimSuffix(string(cmdOut), "\n"))
 	if err != nil {
 		fmt.Println("Error for strconv.Atoi(cmdOut): " + err.Error())
 		return
 	}
-	fmt.Println(num)
 	// Extract frame rate of video
 	// ffprobe -v 0 -of csv=p=0 -select_streams 0 -show_entries stream=r_frame_rate infile
-	frmRteCmd := exec.Command("ffprobe", "-v", "0", "-of", "csv=p=0", "-select_streams", "0", "-show_entries", "stream=r_frame_rate", pathVid)
+	frmRteCmd := exec.Command("ffprobe", "-v", "0", "-of", "csv=p=0", "-select_streams", "0", "-show_entries", "stream=r_frame_rate", pathVid+".mp4")
 	frmRteOut, err := frmRteCmd.Output()
 	if err != nil {
 		fmt.Println("Error for frmRate: " + err.Error())
 		return
 	}
-	fmt.Println(string(frmRteOut))
 	arrFrmRate := strings.Split(string(frmRteOut), "/")
 	numerator, _ := strconv.Atoi(arrFrmRate[0])
 	//denominator, _ := strconv.Atoi(arrFrmRate[1])
@@ -84,16 +82,15 @@ func UploadVid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		frameRate = numerator
 	}
 
-	fmt.Println(frameRate)
 	// Extract horizontal & vertical resolution
 	// ffprobe -v error -select_streams v:0 -show_entries stream=height,width -of csv=s=x:p=0
-	resolution := exec.Command("ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=height,width", "-of", "csv=s=x:p=0", pathVid)
+	resolution := exec.Command("ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=height,width", "-of", "csv=s=x:p=0", pathVid+".mp4")
 	resOut, err := resolution.Output()
 	if err != nil {
 		fmt.Println("Error getting Resolution: " + err.Error())
 		return
 	}
-	fmt.Println("resOut: " + string(resOut))
+
 	resArr := strings.Split(string(resOut), "x")
 	hzn := resArr[0]
 	hznRes, _ := strconv.Atoi(hzn)
@@ -103,10 +100,7 @@ func UploadVid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		fmt.Println("Error strconv.Atoi(vert): " + err.Error())
 		return
 	}
-	fmt.Println(hznRes)
-	fmt.Println(vertRes)
-	fmt.Println("vert: " + vert)
-	// Get Video ID (?) -- I'll just use username
+
 	// Store metadata in DB
 	metaData := MetaData{}
 	metaData.Username = usrnm
@@ -116,13 +110,57 @@ func UploadVid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	metaData.VertRes = vertRes
 	metaData.VidId = metaData.Username
 	AddMetaData(metaData)
+
 	// Extract still images to a directory
-	fmt.Println("End Upload Video Handler")
+	stillPath := pathVid + "_stills/"
+
+	// Check if the folder exists
+
+	// If it does, don't make dir
+	if _, err := os.Stat(stillPath); err == nil {
+		// stillPath does exist
+		// Deleting the folder
+		// delStillPath := exec.Command("rm", "-rf", stillPath)
+		// _, err = delStillPath.Output()
+		// if err != nil {
+		// 	fmt.Println("Error deleting still path: " + err.Error())
+		// 	return
+		// }
+
+	}
+	// If it doesn't, mkdir
+	if _, err := os.Stat(stillPath); os.IsNotExist(err) {
+		// stillPath does not exist
+		err = os.MkdirAll(stillPath, 0777)
+		if err != nil {
+			fmt.Println("Error making directory: " + err.Error())
+			return
+		}
+	}
+
+	outputPath := stillPath + "comebacknader.%d.png"
+	fps := "fps=" + strconv.Itoa(metaData.Rate)
+	extStill := exec.Command("ffmpeg", "-i", pathVid+".mp4",
+		"-vf", fps, outputPath)
+	_, err = extStill.Output()
+	if err != nil {
+		fmt.Println("Error extracting to still images: " + err.Error())
+		return
+	}
+
+	fmt.Println(usrnm + " uploaded a video!")
 	return
 }
 
+// AddMetaData adds a MetaData object to the DB.
 func AddMetaData(metaData MetaData) error {
-	_, err := config.DB.
+	// Delete the current metaData object
+	_, err := config.DB.Exec(`DELETE from metadata where username = $1;`, metaData.Username)
+	if err != nil {
+		panic(err)
+	}
+	// Now, add the new metadata object
+	_, err = config.DB.
 		Exec("INSERT INTO metadata (username, frames, fps, width, height, vidid) VALUES ($1, $2, $3, $4, $5, $6)",
 			metaData.Username, metaData.Frames, metaData.Rate, metaData.HznRes, metaData.VertRes, metaData.VidId)
 	if err != nil {
