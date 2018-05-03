@@ -1,4 +1,4 @@
-<form [formGroup]="signupForm" (ngSubmit)="onSubmit()">
+<!-- <form [formGroup]="signupForm" (ngSubmit)="onSubmit()">
 	<div class="form-group">
 		<div class="row">
 			<div class="col">
@@ -23,3 +23,56 @@
 	</div>
 	<button type="submit" class="btn btn-primary">Sign Up</button>	
 </form>
+
+ -->
+  <div class="container">
+    <div class="row rowHeight">
+      <div class="col-4"></div>
+      <div class="col-4 align-self-center">
+        <div class="container">
+          <br>
+          <div class="row align-items-center white rounded">
+            <div class="col-2"></div>
+            <div class="col-8">
+              <br>
+              <div class="row">
+                <div class="col-12">
+                  <h1 class="dohyeon text-center">VIDPIPE</h1>
+                </div>
+              </div>
+							<form [formGroup]="signupForm" (ngSubmit)="onSubmit()" class="needs-validation was-validated" novalidate>
+                <div class="form-row">
+                  <label for="validationFirst">First name</label>
+                  <input type="text" formControlName="fname" class="form-control" id="validationFirst" placeholder="First Name">
+                </div>
+                <div class="form-row">
+                  <label for="validationLast">Last name</label>
+                  <input type="text" formControlName="lname" class="form-control" id="validationLast" placeholder="Last name">
+                </div>
+                <div class="form-row">
+                  <label for="validationUser">Username</label>
+                  <input type="text" formControlName="username" class="form-control" id="validationUser" placeholder="Username" required>
+                  <div class="invalid-feedback">
+                    Can't be empty!
+                  </div>
+                </div>
+                <div class="form-row">
+                  <label for="validationPass">Password</label>
+                  <input type="password" formControlName="password" placeholder="Password" class="form-control" id="validationPass" required>
+                  <div class="invalid-feedback">
+                    Can't be empty!
+                  </div>
+                </div>
+                <br>
+                <button class="btn btn-primary btn-block" type="submit">Sign Up</button>
+              </form>
+              <br>
+            </div>
+            <div class="col-2"></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-4"></div>
+    </div>
+  </div>
+

@@ -1,4 +1,4 @@
-<video width="640" height="480" controls>
+<!-- <video width="640" height="480" controls>
   <source src="/assets/vid/movie.mp4" type="video/mp4">
   <source src="/assets/vid/movie.ogg" type="video/ogg">
 Your browser does not support the video tag.
@@ -11,4 +11,32 @@ Your browser does not support the video tag.
 		(change)="onFileChange($event)">
 	</div>
 	<button type="submit" class="btn btn-primary">Submit</button>	
-</form>
+</form> -->
+
+  <div class="container">
+    <br>
+    <div class="row video-height justify-content-center">
+      <video class="black" width="640" height="360" controls>
+        <source src="/TEST_VIDEO_prod.mp4" type="video/mp4">
+      </video>
+    </div>
+    <br>
+		<form [formGroup]="uploadVidForm" (ngSubmit)="onSubmit()">
+      <div class="row justify-content-center">
+        <div class="col-3 col-offset-6">
+					<input type="file" class="btn btn-block btn-light btn-sm" name="video" accept="video/*" 
+					(change)="onFileChange($event)">          
+        </div>
+      </div>
+      <div class="row text-center">
+        <div class="col">
+          Upload a video in .avi, .mov, or .mp4 file format
+        </div>
+      </div>
+      <div class="row justify-content-center">
+        <div class="col-7">
+          <button type="action" class="btn btn-block btn-warning text-white">Upload</button>
+        </div>
+      </div>
+    </form>
+  </div>

@@ -1,4 +1,4 @@
-<form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+<!-- <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
 	<div class="form-group">
 		<label for="Username">Username</label>
 		<input type="text" formControlName="username"
@@ -10,4 +10,51 @@
 		class="form-control" aria-describedby="passwordHelp" placeholder="Password">
 	</div>
 	<button type="submit" class="btn btn-primary">Login</button>	
-</form>
+</form> -->
+
+  <div class="container">
+    <div class="row rowHeight">
+      <div class="col-4"></div>
+      <div class="col-4 align-self-center">
+        <div class="container">
+          <br>
+          <div class="row align-items-center white rounded">
+            <div class="col-2"></div>
+            <div class="col-8">
+              <div class="row">
+                <div class="col-12">
+                  <h1 class="dohyeon text-center">VIDPIPE</h1>
+                </div>
+              </div>
+							<form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="needs-validation" novalidate>
+								<div class="form-group">
+	                <div class="form-row">
+	                  <label for="validationUser">Username</label>
+	                  <input type="text" formControlName="username" class="form-control" id="validationUser" placeholder="Username" required>
+	                  <div class="invalid-feedback">
+	                    Looks bad!
+	                  </div>
+	                </div>
+                </div>
+                <div class="form-group">
+	                <div class="form-row">
+	                  <label for="validationPass">Password</label>
+	                  <input type="Password" formControlName="password" placeholder="Password" class="form-control" id="validationPass" required>
+	                  <div class="invalid-feedback">
+	                    Looks bad!
+	                  </div>
+	                </div>
+                </div>
+                <br>
+                <button class="btn btn-success btn-block" type="submit">Login</button>
+              </form>
+            </div>
+            <div class="col-2"></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-4"></div>
+    </div>
+  </div>
+
+
