@@ -1,0 +1,20 @@
+.rowHeight{
+  height: 90vh;
+}
+
+.opaq{
+  opacity:.8;
+  z-index:99;
+}
+
+.dohyeon{
+  font-family: 'Do Hyeon', sans-serif;
+}
+
+.title-text{
+  font-size: 10vh;
+}
+
+.desc-text{
+  font-size: 4vh;
+}

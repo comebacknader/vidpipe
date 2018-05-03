@@ -1,0 +1,31 @@
+body{
+  background: url(/images/delaunayexample.jpg) no-repeat center center fixed;
+  background-size: cover;
+}
+
+.opaq{
+  opacity:.8;
+  z-index:99;
+}
+
+.dohyeon{
+  font-family: 'Do Hyeon', sans-serif;
+}
+
+.white{
+  background-color: white;
+  height: 80vh;
+}
+
+.rowHeight{
+  height: 87vh;
+}
+
+
+input:invalid {
+  box-shadow: 0 0 5px 1px red;
+}
+
+input:focus:invalid {
+  outline: none;
+}
