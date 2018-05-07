@@ -148,6 +148,10 @@ func UploadVid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		return
 	}
 
+	// Now I have to call the application to process the video
+
+	// Af
+
 	fmt.Println(usrnm + " uploaded a video!")
 	return
 }
