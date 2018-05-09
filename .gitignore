@@ -39,3 +39,6 @@ runner.conf
 # System Files
 /ngApp/.DS_Store
 /ngApp/Thumbs.db
+
+# Processing Data
+/proc/shape_predictor_68_face_landmarks.dat

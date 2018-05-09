@@ -46,13 +46,25 @@ func UploadVid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	vidEnc, _ := b64.StdEncoding.DecodeString(vid.VideoEnc)
 
 	pathVid := vidUrl + usrnm
-	err := ioutil.WriteFile(pathVid+".mp4", vidEnc, 0644)
+	fileExt := ".mov"
+	bigFileName := pathVid + "_big" + fileExt
+	err := ioutil.WriteFile(bigFileName, vidEnc, 0644)
 	if err != nil {
 		fmt.Println("Error writing to file : " + err.Error())
 		return
 	}
+
+	// Transcode the video into a smaller resolution.
+	// ffmpeg -y -i bigFileName -vf scale=480:-2,setsar=1:1 -c:v libx264 -crf 51 -preset ultrafast -b:v 512k -an pathVid+fileExt
+	tran := exec.Command("ffmpeg", "-y", "-i", bigFileName, "-vf", "scale=480:-2,setsar=1:1", "-c:v", "libx264", "-crf", "40", "-preset", "ultrafast", "-b:v", "512k", "-an", pathVid+fileExt)
+	_, err = tran.Output()
+	if err != nil {
+		fmt.Println("Error transcoding: " + err.Error())
+		return
+	}
+
 	// Extract # of frames in video
-	cmd := exec.Command("ffprobe", "-v", "error", "-count_frames", "-select_streams", "v:0", "-show_entries", "stream=nb_read_frames", "-of", "default=nokey=1:noprint_wrappers=1", pathVid)
+	cmd := exec.Command("ffprobe", "-v", "error", "-count_frames", "-select_streams", "v:0", "-show_entries", "stream=nb_read_frames", "-of", "default=nokey=1:noprint_wrappers=1", pathVid+fileExt)
 	//cmd := exec.Command("ffmpeg", "-h")
 	cmdOut, err := cmd.Output()
 	if err != nil {
@@ -66,35 +78,39 @@ func UploadVid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 	// Extract frame rate of video
 	// ffprobe -v 0 -of csv=p=0 -select_streams 0 -show_entries stream=r_frame_rate infile
-	frmRteCmd := exec.Command("ffprobe", "-v", "0", "-of", "csv=p=0", "-select_streams", "0", "-show_entries", "stream=r_frame_rate", pathVid+".mp4")
-	frmRteOut, err := frmRteCmd.Output()
+	frmRteCmd := exec.Command("ffprobe", "-v", "0", "-of", "csv=p=0", "-select_streams", "V:0", "-show_entries", "stream=r_frame_rate", pathVid+fileExt)
+	frmRteOutDrty, err := frmRteCmd.Output()
 	if err != nil {
 		fmt.Println("Error for frmRate: " + err.Error())
 		return
 	}
-	arrFrmRate := strings.Split(string(frmRteOut), "/")
+	frmRteOut := strings.Trim(string(frmRteOutDrty), " \n")
+	arrFrmRate := strings.Split(frmRteOut, "/")
 	numerator, _ := strconv.Atoi(arrFrmRate[0])
-	//denominator, _ := strconv.Atoi(arrFrmRate[1])
+	denominator, _ := strconv.Atoi(arrFrmRate[1])
 	var frameRate int
-	if numerator < 0 {
-		frameRate = numerator
+	if denominator <= 0 {
+		fmt.Println("Error: frmRate denominator == 0")
+		return
 	} else {
-		frameRate = numerator
+		frameRate = numerator / denominator
 	}
 
 	// Extract horizontal & vertical resolution
 	// ffprobe -v error -select_streams v:0 -show_entries stream=height,width -of csv=s=x:p=0
-	resolution := exec.Command("ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=height,width", "-of", "csv=s=x:p=0", pathVid+".mp4")
-	resOut, err := resolution.Output()
+	resolution := exec.Command("ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=height,width", "-of", "csv=s=x:p=0", pathVid+fileExt)
+	resOutDirty, err := resolution.Output()
 	if err != nil {
 		fmt.Println("Error getting Resolution: " + err.Error())
 		return
 	}
-
+	resOut := strings.Trim(string(resOutDirty), " \n")
+	fmt.Println("resOut:", string(resOut))
 	resArr := strings.Split(string(resOut), "x")
 	hzn := resArr[0]
 	hznRes, _ := strconv.Atoi(hzn)
-	vert := strings.TrimSuffix(strings.Trim(resArr[1], " "), "\n")
+	//vert := strings.Split(resArr[1], "\n")[0]
+	vert := resArr[1]
 	vertRes, err := strconv.Atoi(vert)
 	if err != nil {
 		fmt.Println("Error strconv.Atoi(vert): " + err.Error())
@@ -120,12 +136,12 @@ func UploadVid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if _, err := os.Stat(stillPath); err == nil {
 		// stillPath does exist
 		// Deleting the folder
-		// delStillPath := exec.Command("rm", "-rf", stillPath)
-		// _, err = delStillPath.Output()
-		// if err != nil {
-		// 	fmt.Println("Error deleting still path: " + err.Error())
-		// 	return
-		// }
+		delStillPath := exec.Command("rm", "-rf", stillPath)
+		_, err = delStillPath.Output()
+		if err != nil {
+			fmt.Println("Error deleting still path: " + err.Error())
+			return
+		}
 
 	}
 	// If it doesn't, mkdir
@@ -138,10 +154,12 @@ func UploadVid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		}
 	}
 
-	outputPath := stillPath + "comebacknader.%d.png"
-	fps := "fps=" + strconv.Itoa(metaData.Rate)
-	extStill := exec.Command("ffmpeg", "-i", pathVid+".mp4",
-		"-vf", fps, outputPath)
+	outputPath := stillPath + "comebacknader.%d.jpg"
+	fps := strconv.Itoa(metaData.Rate)
+	//fpsInv := "1" + "\\" + strconv.Itoa(metaData.Rate)
+	fmt.Println("fps: " + fps)
+	extStill := exec.Command("ffmpeg", "-i", pathVid+fileExt,
+		"-r", fps, outputPath)
 	_, err = extStill.Output()
 	if err != nil {
 		fmt.Println("Error extracting to still images: " + err.Error())
@@ -149,8 +167,10 @@ func UploadVid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 
 	// Now I have to call the application to process the video
+	// Return value: 0 if success
+	// Return value: 1 if failure
 
-	// Af
+	// ./proc comebacknader
 
 	fmt.Println(usrnm + " uploaded a video!")
 	return

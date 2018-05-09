@@ -1,7 +1,8 @@
-body{
-  background: url(/images/delaunayexample.jpg) no-repeat center center fixed;
+.my-container {
+  background: url("/delaunayexample-prod.jpg") no-repeat center center fixed;
   background-size: cover;
 }
+
 
 .opaq{
   opacity:.8;
