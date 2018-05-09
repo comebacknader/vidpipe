@@ -1,0 +1,12 @@
+CREATE TABLE metadata (id serial primary key, frames int not null, width int not null, height int not null, fps real not null, username varchar(50) not null, vidid varchar(50) not null);
+
+CREATE TABLE users(id serial primary key, username varchar(50) not null, firstname varchar(50), lastname varchar(50), password varchar(70) not null, lastlogin timestamp not null, ip varchar(25) not null);
+
+
+CREATE TABLE sessions (id serial primary key, uuid varchar(150) not null, user_id integer references users (id), logintime timestamp not null, ip varchar(25) not null);
+
+
+CREATE TABLE skull (id serial primary key, yaw real not null, pitch real not null, roll real not null);
+
+
+CREATE TABLE pupilandof (id serial primary key, leftploc point not null, rightploc point not null, fableftploc point not null, fabrightploc point not null, ofd point[] not null);
