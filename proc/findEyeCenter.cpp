@@ -72,7 +72,7 @@ void testPossibleCentersFormula(int x, int y, const cv::Mat &weight,double gx, d
   }
 }
 
-cv::Point findEyeCenter(cv::Mat face, cv::Rect eye, std::string debugWindow) {
+cv::Point findEyeCenter(cv::Mat face, cv::Rect eye) {
   cv::Mat eyeROIUnscaled = face(eye);
   cv::Mat eyeROI;
   scaleToFastSize(eyeROIUnscaled, eyeROI);
