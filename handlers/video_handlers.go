@@ -40,6 +40,11 @@ func UploadVid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		return
 	}
 
+	if vid.VideoEnc == "" {
+		http.Error(w, http.StatusText(500), http.StatusInternalServerError)
+		return
+	}
+
 	// Get the username
 	usrnm := vid.Username
 	// Store the video in the file system
@@ -47,6 +52,7 @@ func UploadVid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 	pathVid := vidUrl + usrnm
 	fileExt := ".mov"
+	finalExt := ".mp4"
 	bigFileName := pathVid + "_big" + fileExt
 	err := ioutil.WriteFile(bigFileName, vidEnc, 0644)
 	if err != nil {
@@ -78,7 +84,8 @@ func UploadVid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 	// Extract frame rate of video
 	// ffprobe -v 0 -of csv=p=0 -select_streams 0 -show_entries stream=r_frame_rate infile
-	frmRteCmd := exec.Command("ffprobe", "-v", "0", "-of", "csv=p=0", "-select_streams", "V:0", "-show_entries", "stream=r_frame_rate", pathVid+fileExt)
+	frmRteCmd := exec.Command("ffprobe", "-v", "0", "-of", "csv=p=0",
+		"-select_streams", "V:0", "-show_entries", "stream=r_frame_rate", pathVid+fileExt)
 	frmRteOutDrty, err := frmRteCmd.Output()
 	if err != nil {
 		fmt.Println("Error for frmRate: " + err.Error())
@@ -98,7 +105,8 @@ func UploadVid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 	// Extract horizontal & vertical resolution
 	// ffprobe -v error -select_streams v:0 -show_entries stream=height,width -of csv=s=x:p=0
-	resolution := exec.Command("ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=height,width", "-of", "csv=s=x:p=0", pathVid+fileExt)
+	resolution := exec.Command("ffprobe", "-v", "error", "-select_streams",
+		"v:0", "-show_entries", "stream=height,width", "-of", "csv=s=x:p=0", pathVid+fileExt)
 	resOutDirty, err := resolution.Output()
 	if err != nil {
 		fmt.Println("Error getting Resolution: " + err.Error())
@@ -129,6 +137,7 @@ func UploadVid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 	// Extract still images to a directory
 	stillPath := pathVid + "_stills/"
+	outputDirPath := pathVid + "_output/"
 
 	// Check if the folder exists
 
@@ -152,9 +161,15 @@ func UploadVid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 			fmt.Println("Error making directory: " + err.Error())
 			return
 		}
+		// make a directory for the drawn over stills
+		err = os.MkdirAll(outputDirPath, 0777)
+		if err != nil {
+			fmt.Println("Error making output directory: " + err.Error())
+			return
+		}
 	}
 
-	outputPath := stillPath + "comebacknader.%d.jpg"
+	outputPath := stillPath + usrnm + ".%d.jpg"
 	fps := strconv.Itoa(metaData.Rate)
 	//fpsInv := "1" + "\\" + strconv.Itoa(metaData.Rate)
 	fmt.Println("fps: " + fps)
@@ -167,12 +182,32 @@ func UploadVid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 
 	// Now I have to call the application to process the video
-	// Return value: 0 if success
-	// Return value: 1 if failure
 
-	// ./proc comebacknader
+	execDraw := exec.Command("/home/nadercarun/go/src/github.com/comebacknader/vidpipe/proc/proc", usrnm)
+	err = execDraw.Run()
+	// If err == nil, then success.
+	if err != nil {
+		fmt.Println("Error calling processing application: " + err.Error())
+		return
+	}
+	fmt.Println("Still images drawn in /comebacknader_output/")
+
+	// Now I need to call ffMpeg to collate the still images together to make a movie.
+	// Then I need to return a success status
+	//ffmpeg -r 30 -start_number 1 -f image2 -i input_image_%d.png -c:v libx264 output.mp4
+	//ffmpeg -r 29 -start_number 1 -f image2 -i /home/nadercarun/go/src/github.com/comebacknader/vidpipe/assets/vid/comebacknader_output/comebacknader.%d.jpg -c:v libx264 /home/nadercarun/go/src/github.com/comebacknader/vidpipe/assets/vid/comebacknader.mp4
+	outVidPath := outputDirPath + usrnm + ".%d.jpg"
+	execCollate := exec.Command("ffmpeg", "-y", "-r", fps,
+		"-start_number", "1", "-f", "image2", "-i", outVidPath, "-c:v", "libx264", pathVid+finalExt)
+	err = execCollate.Run()
+	// If err == nil, then success.
+	if err != nil {
+		fmt.Println("Error collating the video from stills: " + err.Error())
+		return
+	}
 
 	fmt.Println(usrnm + " uploaded a video!")
+	w.WriteHeader(200)
 	return
 }
 

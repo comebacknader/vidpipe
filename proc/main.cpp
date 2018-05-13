@@ -55,8 +55,8 @@ static void printRes(PGresult * res) {
 }
 
 
-int main(int argc, char **argv) {
-  TwoPupils two;
+int main(int argc, char **argv) 
+{
   // Postgres DB information
   const char *conninfo;
   PGconn     *conn;
@@ -78,16 +78,13 @@ int main(int argc, char **argv) {
 
   cout << "Connected to the Database." << endl;
 
-  // 1. Get the metadata -- need to get the # of frames it is 
-
-  // Username passed in as first argument to application
+  // argv[1] == [username] passed in as first argument 
   string username = argv[1];
 
   cout << username << endl;
   string selStr = "select * from metadata where vidid='";
   string endSel = "';";
   string queryStr =  selStr + username + endSel;
-  // cout << queryStr.c_str() << endl;  
 
   res = PQexec(conn, queryStr.c_str());
   if (PQresultStatus(res) != PGRES_TUPLES_OK) {
@@ -102,20 +99,17 @@ int main(int argc, char **argv) {
   // Called when response (res) no longer needed
   PQclear(res);
 
-  // 2. NOW I need to record data points to each still 
-  // image in /[username]_stills by creating post
   // https://www.learnopencv.com/speeding-up-dlib-facial-landmark-detector/
-  cv::Mat im;
-  cv::Mat im_small, im_display, im_copy;
 
   string imgDir = "/home/nadercarun/go/src/github.com/comebacknader/vidpipe/assets/vid/" + username + "_stills/";
+  string outputDir = "/home/nadercarun/go/src/github.com/comebacknader/vidpipe/assets/vid/" + username + "_output/";
   string imgDir2 = "./" + username + "_stills";
   frontal_face_detector detector = get_frontal_face_detector();
   shape_predictor sp;
-  deserialize("shape_predictor_68_face_landmarks.dat") >> sp;  
+  deserialize("/home/nadercarun/go/src/github.com/comebacknader/vidpipe/proc/shape_predictor_68_face_landmarks.dat") >> sp;  
 
-  std::vector<rectangle> faces;
-  std::vector<full_object_detection> shapes;  
+  std::vector<full_object_detection> shapes;
+
   // Find out number of still images that get created. 
   allFiles = get_files_in_directory_tree(imgDir, match_ending(".jpg"), 0);
   int numStillImgs = allFiles.size();
@@ -125,57 +119,79 @@ int main(int argc, char **argv) {
   string fileNumStr;
 
   landmark_data *ildmrks;
-  ildmrks = new landmark_data[numStillImgs];  
+  ildmrks = new landmark_data[numStillImgs + 1];  
 
+  cv::Rect face;
+  cv::Mat faceROI;
+
+  std::vector<cv::Mat> rgbChannels(3);
+  std::vector<dlib::rectangle> faces;
   // Iterate over each filename and grab each file by it's number. 
   for (i = 1; i <= numStillImgs; i++) {
-    cout << "Processing Image " << i << endl;
-   // clock_t startTime = clock();
-    array2d<rgb_pixel> img;
+   
+    //cout << "Processing Image " << i << endl;
+   
     fileNumStr = std::to_string(i);
     fullImgPath = imgDir + username + "." + fileNumStr + ".jpg";    // to compute its execution duration in runtime
-    //cout << "img instantiate:" << double( clock() - startTime ) / (double)CLOCKS_PER_SEC<< " seconds." << endl;
 
-    //startTime = clock();
-    // im --> is the Image 
+    cv::Mat frame_gray;
+    cv::Mat im;    
+    
     im = imread(fullImgPath);
+    cv::split(im, rgbChannels);
+    frame_gray = rgbChannels[2];  
 
-    //cout << "Load Image:" << double( clock() - startTime ) / (double)CLOCKS_PER_SEC<< " seconds." << endl;
+    //cv::resize(im, im_small, cv::Size(), 1.0/4, 1.0/4); 
+    //cv_image<bgr_pixel> cimg_small(im_small);
+    //cv_image<bgr_pixel> cimg(im);
 
-    cv::resize(im, im_small, cv::Size(), 1.0/4, 1.0/4); 
-
-    cv_image<bgr_pixel> cimg_small(im_small);
-    cv_image<bgr_pixel> cimg(im);
-
-    if ( i % 3 == 0 ) {
-      faces = detector(cimg_small);      
+    // Converts the cv image into a dlib image  
+    dlib::cv_image<unsigned char> img(frame_gray);
+    
+    if ( i == 1 || (i % 100 == 0)) {
+      faces = detector(img);
     }
+    // std::vector<dlib::rectangle> faces = detector(img);
     //cout << "Improved Detector Time:" << double( clock() - startTime ) / (double)CLOCKS_PER_SEC<< " seconds." << endl;
    
     //startTime = clock();    
-  
 
-    std::vector<cv::Rect> openCVFaces;
+    for (unsigned long k = 0; k < faces.size(); k++) 
+    {
+      // dlib::rectangle r(
+      //   (long)(faces[k].left() * 4),
+      //   (long)(faces[k].top() * 4),
+      //   (long)(faces[k].right() * 4),
+      //   (long)(faces[k].bottom() * 4)        
+      //   );
 
-    for (unsigned long k = 0; k < faces.size(); k++) {
-      dlib::rectangle r(
-        (long)(faces[k].left() * 4),
-        (long)(faces[k].top() * 4),
-        (long)(faces[k].right() * 4),
-        (long)(faces[k].bottom() * 4)        
-        );
+      // Make sure that the coordinates are not below 0. 
+      if (faces[k].left() < 1) 
+      {
+          faces[k].set_left(1);
+      }
+      if (faces[k].width() < 1 || faces[k].left() + faces[k].width() >= im.size().width) 
+      {
+          faces[k].set_right(im.size().width - 2);
+      }
+      if (faces[k].top() < 1) 
+      {
+          faces[k].set_top(1);
+      }
+      if (faces[k].height() < 1 || faces[k].top() + faces[k].height() >= im.size().height) 
+      {
+          faces[k].set_bottom(im.size().height - 2);
+      }
 
-      full_object_detection shape = sp(cimg, r);
+      full_object_detection shape = sp(img, faces[k]);
 
       // 70 == NUMBER_OF_LANDMARKS
-      for (int k = 0; k < 70 - 2; k++)
+      for (int p = 0; p < 70 - 2; p++)
       {
-          ildmrks[i].points[k] = shape.part(k);
+          ildmrks[i].points[p] = shape.part(p);
       }
 
       shapes.push_back(shape);
-      cv::Rect cvFace = cv::Rect(cv::Point2i(r.left(), r.top()), cv::Point2i(r.right() + 1, r.bottom() + 1));
-      openCVFaces.push_back(cvFace); 
 
       // 2D points.
       std::vector<cv::Point2d> img_pts;
@@ -225,38 +241,48 @@ int main(int argc, char **argv) {
       }
       cv::line(im, img_pts[0], nose_end_point2D[0], cv::Scalar(255, 0, 0), 2);
 
-      // faceROI is the image for pupil dectection
-      face = cv::Rect(faces[j].left(), faces[j].top(), faces[j].width(), faces[j].height());
+      // EYE DETECTION
+
+      face = cv::Rect(faces[k].left(), faces[k].top(), faces[k].width(), faces[k].height());
       faceROI = frame_gray(face);
 
-      //-- Find eye regions and draw them
-      int leftLeft = landmarkData[i].points[36].x() - face.x;
-      int leftTop = landmarkData[i].points[38].y() - face.y;
-      int leftWidth = landmarkData[i].points[39].x() - landmarkData[i].points[36].x();
-      if (leftWidth < 1) { leftWidth = 1; }
-      int leftHeight = landmarkData[i].points[41].y() - landmarkData[i].points[38].y();
-      if (leftHeight < 1) {
-        leftHeight = 1;
-        cv::Rect leftEyeRegion(leftLeft, leftTop, leftWidth, leftHeight);
+      int leftLeft = ildmrks[i].points[36].x() - face.x;
+      int leftTop = ildmrks[i].points[38].y() - face.y;
+      
+      int leftWidth = ildmrks[i].points[39].x() - ildmrks[i].points[36].x();
+      
+      if (leftWidth < 1) 
+      { 
+        leftWidth = 1; 
       }
-      int rightWidth = landmarkData[i].points[45].x() - landmarkData[i].points[42].x();
-      if (rightWidth < 1) {
+      int leftHeight = ildmrks[i].points[41].y() - ildmrks[i].points[38].y();
+      if (leftHeight < 1) 
+      {
+        leftHeight = 1;
+      }
+
+      cv::Rect leftEyeRegion(leftLeft, leftTop, leftWidth, leftHeight);
+      int rightWidth = ildmrks[i].points[45].x() - ildmrks[i].points[42].x();
+      if (rightWidth < 1) 
+      {
           rightWidth = 1;
       }
-      int rightHeight = landmarkData[i].points[46].y() - landmarkData[i].points[43].y();
-      if (rightHeight < 1)
+      int rightHeight = ildmrks[i].points[46].y() - ildmrks[i].points[43].y();
+      if (rightHeight < 1) 
+      {
           rightHeight = 1;
-      cv::Rect rightEyeRegion(landmarkData[i].points[42].x() - face.x,
-                              landmarkData[i].points[43].y() - face.y,
+      }
+      cv::Rect rightEyeRegion(ildmrks[i].points[42].x() - face.x,
+                              ildmrks[i].points[43].y() - face.y,
                               rightWidth,
                               rightHeight);
 
       //-- Find Eye Centers
-      cv::Point leftPupil = findEyeCenter(faceROI, leftEyeRegion, "Left Eye");
+      cv::Point leftPupil = findEyeCenter(faceROI, leftEyeRegion);
       leftPupil.x += leftEyeRegion.x + face.x;
       leftPupil.y += leftEyeRegion.y + face.y;
 
-      cv::Point rightPupil = findEyeCenter(faceROI, rightEyeRegion, "Right Eye");
+      cv::Point rightPupil = findEyeCenter(faceROI, rightEyeRegion);
       rightPupil.x += rightEyeRegion.x + face.x;
       rightPupil.y += rightEyeRegion.y + face.y;
 
@@ -267,26 +293,74 @@ int main(int argc, char **argv) {
     }
     //cout << "Shape Predicting:" << double( clock() - startTime ) / (double)CLOCKS_PER_SEC<< " seconds." << endl;
 
-    // EYE DETECTION 
-    // allEyes should contain all the (X,Y) coordinates for each pupil out of the faces detected for this image. 
-    // std::vector<TwoPupils> allEyes = getEyePupils(im, openCVFaces, shapes);  
-    // drawEyes(im, allEyes);
+    // Draw Delaunay Triangles 
+
+    face_landmark_node *face_landmark_list_head;
+    face_landmark_list_head = NULL;
+    face_landmark_list_head = load_face_landmark_data(ildmrks[i], face_landmark_list_head, i);
     
-    // GET THE YAW, PITCH, & ROLL 
-    // std::vector<TwoPupils> allHeads = getPoseEstimations(im, shapes);
-    // drawPose(im, allHeads); 
 
-    // DRAW DELAUNAY TRIANGLES 
-    drawDelTri(ldmarks, shapes, im);
+    face_landmark_node *face_landmark_element;
+    cv::Scalar delaunay_color(255,0,0), points_color(0, 255, 0); // Note: delaunay_color and points_color are in BGR (BLUE, GREEN, RED) format
+    cv::Mat srcImg;
+    cv::Size source_image_resolution;    
+
+    srcImg = rgbChannels[2];
+    if (!srcImg.empty())
+    {
+        source_image_resolution = srcImg.size();
+        cv::Rect rect(0, 0, source_image_resolution.width, source_image_resolution.height);
+        cv::Subdiv2D subdiv(rect);
 
 
-    // Write out the image in /vids/comebacknader_drawn/comebacknader_[frame #].jpg
-    // imwrite(output_dir + "/" + video_id + "." + to_string(i) + IMAGE_TYPE, images[i]);
+        face_landmark_element = face_landmark_list_head;
+        
+        int count = 0;
+        float xCoord, yCoord;
+        while (count < (70 - 2) && face_landmark_element != NULL)
+        {
+            xCoord = face_landmark_element->x;
+            yCoord = face_landmark_element->y;
+            
+
+            if(xCoord >= source_image_resolution.width)
+                xCoord = source_image_resolution.width - 1;
+            if(yCoord >= source_image_resolution.height)
+                yCoord = source_image_resolution.height - 1;
+
+            ++count;
+            subdiv.insert(cv::Point2f(xCoord, yCoord));
+            face_landmark_element = face_landmark_element->next;
+        }
+        
+        draw_delaunay(srcImg, subdiv, delaunay_color);
+        face_landmark_element = face_landmark_list_head;
+        
+        count = 0;
+        while (count < (70 - 2) && face_landmark_element != NULL)
+        {
+            ++count;
+            draw_point(srcImg, cv::Point2f(face_landmark_element->x, face_landmark_element->y), points_color);
+            face_landmark_element = face_landmark_element->next;
+        }
+
+        circle(srcImg, cv::Point2f(face_landmark_element->x, face_landmark_element->y), 5, 1234, 4);
+        face_landmark_element = face_landmark_element->next;
+        circle(srcImg, cv::Point2f(face_landmark_element->x, face_landmark_element->y), 5, 1234, 4);
+
+        //scout << "writing to " << output_filename << endl;
+        cv::merge(rgbChannels, srcImg);
+        // Write out the image in /vids/comebacknader_drawn/comebacknader.[still #].jpg
+        imwrite(outputDir + "/" + username + "." + to_string(i) + ".jpg", srcImg);
+    }
+    // END ANALYZING/DRAWING ONE IMAGE 
   }
-
+  cout << "End Analyzing Frames." << endl;
+  cout << "Closing Database." << endl;  
   // Close connection to DB and cleanup
   PQfinish(conn);
-
+  delete [] ildmrks;
+  cout << "Exiting App." << endl;
   return 0;      
 }
 

@@ -204,8 +204,17 @@ func PostLogout(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 // return 1 is error
 // return 0 is non-error
 func ValidateUserFields(w http.ResponseWriter, usr models.User) int {
-	// errors := CredErrors{}
-	// errors.Error = "Username cannot be blank"
+
+	if usr.Firstname == "" {
+		w.WriteHeader(400)
+		return 0
+	}
+
+	if usr.Lastname == "" {
+		w.WriteHeader(400)
+		return 0
+	}
+
 	if usr.Username == "" {
 		w.WriteHeader(400)
 		return 0

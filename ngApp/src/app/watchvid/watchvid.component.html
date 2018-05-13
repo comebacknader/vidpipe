@@ -15,9 +15,20 @@ Your browser does not support the video tag.
 <div class="my-container">
   <div class="container">
     <br>
-    <div class="row video-height justify-content-center">
-      <video class="black" width="640" height="360" controls>
-        <source src="/TEST_VIDEO_prod.mp4" type="video/mp4">
+    <div class="row justify-content-center">
+      <div [style.display]="errExist ? 'block' : 'none'" class="alert alert-danger" role="alert">
+        There was an error uploading/processing your video. 
+      </div>
+      <div [style.display]="vidPending ? 'block' : 'none'" class="alert alert-warning" role="alert">
+        Your video is being processed. Please wait. 
+      </div>
+      <div [style.display]="vidFinished ? 'block' : 'none'" class="alert alert-success" role="alert">
+        Your video has finished uploading! 
+      </div>            
+    </div>        
+    <div class="row video-height justify-content-center">  
+      <video class="black" width="640" height="360" controls #videoPlayer>
+        <source [src]="vidSrc" type="video/mp4">
       </video>
     </div>
     <br>
@@ -30,7 +41,7 @@ Your browser does not support the video tag.
       </div>
       <div class="row text-center">
         <div class="col">
-          Upload a video in .avi, .mov, or .mp4 file format
+          Upload a video in .mov file format. 
         </div>
       </div>
       <div class="row justify-content-center">

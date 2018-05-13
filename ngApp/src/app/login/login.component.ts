@@ -11,6 +11,7 @@ import { Router } from '@angular/router';
 })
 export class LoginComponent implements OnInit {
 	loginForm: FormGroup;
+  errExist = false;
 
   constructor(private auth: AuthService, private router: Router) { }
 
@@ -29,8 +30,11 @@ export class LoginComponent implements OnInit {
           this.auth.isAuth = true;
           this.router.navigate(['watch']);
         },
-        error => console.log("Error: " + error)
-        );
+        error =>  {
+          this.errExist = true;
+          setTimeout(() => {this.errExist=false;}, 4000);
+          console.log("Error: " + error);
+        });
   }
 
 }
