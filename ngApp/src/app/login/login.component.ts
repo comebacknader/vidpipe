@@ -27,7 +27,7 @@ export class LoginComponent implements OnInit {
     this.auth.loginUser(this.loginForm.value)
       .subscribe(
         data => { 
-          this.auth.isAuth = true;
+          this.auth.isAuth.next(true);
           this.router.navigate(['watch']);
         },
         error =>  {

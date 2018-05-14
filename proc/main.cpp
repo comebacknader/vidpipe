@@ -21,7 +21,7 @@
 #include <dlib/opencv.h>
 
 #include "findEyeCenter.h"
-#include "eyelike.h"
+#include "delaunay.h"
 #include "constants.h"
 
 
@@ -92,10 +92,10 @@ int main(int argc, char **argv)
       PQclear(res);
       exit_nicely(conn);
   }
-  //printRes(res);
-  char *numFramesStr = PQgetvalue(res,0,1);
-  int numFramesInt = std::stoi(numFramesStr);
-  cout << numFramesStr << endl;
+  //char *numFramesStr = PQgetvalue(res,0,1);
+  //int numFramesInt = std::stoi(numFramesStr);
+  //cout << numFramesStr << endl;
+  
   // Called when response (res) no longer needed
   PQclear(res);
 
@@ -108,99 +108,115 @@ int main(int argc, char **argv)
   shape_predictor sp;
   deserialize("/home/nadercarun/go/src/github.com/comebacknader/vidpipe/proc/shape_predictor_68_face_landmarks.dat") >> sp;  
 
-  std::vector<full_object_detection> shapes;
+  //std::vector<full_object_detection> shapes;
 
   // Find out number of still images that get created. 
   allFiles = get_files_in_directory_tree(imgDir, match_ending(".jpg"), 0);
   int numStillImgs = allFiles.size();
   cout << "numStillImgs: " << numStillImgs << endl;
 
-  string fullImgPath;
-  string fileNumStr;
+  string fullImgPath, fileNumStr;
 
-  landmark_data *ildmrks;
-  ildmrks = new landmark_data[numStillImgs + 1];  
+  lmarkData *ildmrks = new lmarkData[numStillImgs + 1];  
 
   cv::Rect face;
   cv::Mat faceROI;
 
   std::vector<cv::Mat> rgbChannels(3);
   std::vector<dlib::rectangle> faces;
+
+  // I need an array of 68 points 
+  // Every point x,y will be converted into a string and stored in here
+  // Then all the strings will be appended to a INSERT...ARRAY + ..here.. + ]);
+  std::vector<string> allPoints(70);
+  int skull_id;
+  int pupilandof_id; 
+  clock_t startTime = clock();
   // Iterate over each filename and grab each file by it's number. 
   for (i = 1; i <= numStillImgs; i++) {
-   
-    //cout << "Processing Image " << i << endl;
-   
+    
+    cout << "Processing Image " << i << endl;
+    clock_t sTime;
+    //sTime = clock();  
     fileNumStr = std::to_string(i);
     fullImgPath = imgDir + username + "." + fileNumStr + ".jpg";    // to compute its execution duration in runtime
 
-    cv::Mat frame_gray;
-    cv::Mat im;    
+    cv::Mat im, frame_gray, frame_gray_small;   
     
     im = imread(fullImgPath);
     cv::split(im, rgbChannels);
-    frame_gray = rgbChannels[2];  
+    frame_gray = rgbChannels[2];
 
-    //cv::resize(im, im_small, cv::Size(), 1.0/4, 1.0/4); 
-    //cv_image<bgr_pixel> cimg_small(im_small);
-    //cv_image<bgr_pixel> cimg(im);
-
+    cv::resize(frame_gray, frame_gray_small, cv::Size(), 1.0/NUMBER_SCALE_IMAGE, 1.0/NUMBER_SCALE_IMAGE); 
+  
     // Converts the cv image into a dlib image  
-    dlib::cv_image<unsigned char> img(frame_gray);
-    
-    if ( i == 1 || (i % 100 == 0)) {
-      faces = detector(img);
+    dlib::cv_image<unsigned char> cimg_small(frame_gray_small);
+    dlib::cv_image<unsigned char> cimg(frame_gray);
+
+    bool skipFlag = true;
+
+    if ( i == 1 || (i % SKIPPED_IMAGES == 0)) {
+      skipFlag = false;
+      // sTime = clock();
+      faces = detector(cimg_small);
+      // cout << "detector() took: " << double( clock() - sTime ) / (double)CLOCKS_PER_SEC << " seconds." << endl;
     }
-    // std::vector<dlib::rectangle> faces = detector(img);
-    //cout << "Improved Detector Time:" << double( clock() - startTime ) / (double)CLOCKS_PER_SEC<< " seconds." << endl;
-   
-    //startTime = clock();    
+    
+    for (unsigned long k = 0; k < faces.size(); k++) {
 
-    for (unsigned long k = 0; k < faces.size(); k++) 
-    {
-      // dlib::rectangle r(
-      //   (long)(faces[k].left() * 4),
-      //   (long)(faces[k].top() * 4),
-      //   (long)(faces[k].right() * 4),
-      //   (long)(faces[k].bottom() * 4)        
-      //   );
+      if (!skipFlag) {
+        long recLeft = (faces[k].left() * NUMBER_SCALE_IMAGE);
+        long recRight = (faces[k].right() * NUMBER_SCALE_IMAGE);
+        long recTop = (faces[k].top() * NUMBER_SCALE_IMAGE);
+        long recBottom = (faces[k].bottom() * NUMBER_SCALE_IMAGE);
+        faces[k].set_left(recLeft);
+        faces[k].set_right(recRight);     
+        faces[k].set_top(recTop);
+        faces[k].set_bottom(recBottom);
 
-      // Make sure that the coordinates are not below 0. 
-      if (faces[k].left() < 1) 
-      {
-          faces[k].set_left(1);
-      }
-      if (faces[k].width() < 1 || faces[k].left() + faces[k].width() >= im.size().width) 
-      {
-          faces[k].set_right(im.size().width - 2);
-      }
-      if (faces[k].top() < 1) 
-      {
-          faces[k].set_top(1);
-      }
-      if (faces[k].height() < 1 || faces[k].top() + faces[k].height() >= im.size().height) 
-      {
-          faces[k].set_bottom(im.size().height - 2);
-      }
+        // Verify that the face rectangles aren't too small or too large. 
+        if (faces[k].left() < 1) { faces[k].set_left(1); }
+        if (faces[k].width() < 1 || ((faces[k].left() + faces[k].width()) >= im.size().width)) 
+        {
+            faces[k].set_right(im.size().width - 2);
+        }
+        if (faces[k].top() < 1) { faces[k].set_top(1); }
+        if (faces[k].height() < 1 || ((faces[k].top() + faces[k].height()) >= im.size().height)) 
+        {
+            faces[k].set_bottom(im.size().height - 2);
+        }
+      } 
 
-      full_object_detection shape = sp(img, faces[k]);
+      // Creating dlib rectangle scaled back up 4x. 
+      dlib::rectangle r(
+        faces[k].left(),
+        faces[k].top(),
+        faces[k].right(),
+        faces[k].bottom()        
+        );
 
-      // 70 == NUMBER_OF_LANDMARKS
-      for (int p = 0; p < 70 - 2; p++)
-      {
+      full_object_detection shape = sp(cimg, r);
+      
+      // 70 == NUMBER_OF_LANDMARKS + 2 Eye Points
+      // 70 - 2 == 68 data points on face
+      for (int p = 0; p < 68; p++) {
           ildmrks[i].points[p] = shape.part(p);
+          //Each point p has an x() and a y() that I need to 
+          // store in a vector of strings and store in the DB
+          string x = std::to_string(ildmrks[i].points[p].x());
+          string y = std::to_string(ildmrks[i].points[p].y());
+          string point =  string("point(") + x + string(",") + y + string(")");
+          allPoints[p] = point;
       }
-
-      shapes.push_back(shape);
 
       // 2D points.
       std::vector<cv::Point2d> img_pts;
-      img_pts.push_back(toCv(shape.part(33))); // Nose tip
-      img_pts.push_back(toCv(shape.part(8)));  // Chin
-      img_pts.push_back(toCv(shape.part(45))); // Left eye left corner
-      img_pts.push_back(toCv(shape.part(36))); // Right eye right corner
-      img_pts.push_back(toCv(shape.part(54))); // Left Mouth corner
-      img_pts.push_back(toCv(shape.part(48))); // Right mouth corner
+      img_pts.push_back(toCVpoint(shape.part(33))); // Nose tip
+      img_pts.push_back(toCVpoint(shape.part(8)));  // Chin
+      img_pts.push_back(toCVpoint(shape.part(45))); // Left eye left corner
+      img_pts.push_back(toCVpoint(shape.part(36))); // Right eye right corner
+      img_pts.push_back(toCVpoint(shape.part(54))); // Left Mouth corner
+      img_pts.push_back(toCVpoint(shape.part(48))); // Right mouth corner
 
       // 3D points.
       std::vector<cv::Point3d> mod_pts;
@@ -218,28 +234,57 @@ int main(int argc, char **argv)
       cv::Mat dist_coeffs = cv::Mat::zeros(4, 1, cv::DataType<double>::type); // Assuming no lens distortion
 
       // Output rotation and translation
-      cv::Mat rotation_vector; // Rotation in axis-angle form
+      cv::Mat rotVec; // Rotation in axis-angle form
       cv::Mat translation_vector;
 
       // Solve for pose
-      // solvePnP will fill rotation_vector
-      cv::solvePnP(mod_pts, img_pts, camera_matrix, dist_coeffs, rotation_vector, translation_vector,CV_ITERATIVE);
+      // solvePnP will fill rotVec
+      cv::solvePnP(mod_pts, img_pts, camera_matrix, dist_coeffs, rotVec, translation_vector,CV_ITERATIVE);
 
-      cv::Matx33d rotation;
-      cv::Rodrigues(rotation_vector, rotation);
-      // Project a 3D point (0, 0, 1000.0) onto the image plane.
-      // We use this to draw a line sticking out of the nose
-      std::vector<cv::Point3d> nose_end_point3D;
-      std::vector<cv::Point2d> nose_end_point2D;
-      nose_end_point3D.push_back(cv::Point3d(0, 0, 1000.0));
-      cv::projectPoints(nose_end_point3D, rotation_vector, translation_vector, camera_matrix, dist_coeffs, nose_end_point2D);
-      
-      // Draws the pose points  
-      for (int i = 0; i < img_pts.size(); i++)
-      {
-          cv::circle(im, img_pts[i], 3, cv::Scalar(0, 0, 255), -1);
+      // Calculate Yaw, Pitch, and Roll 
+      double pi = 3.14159265;
+      double yaw, roll, pit;
+      bool rotVecNotNeg1 = rotVec.at<double>(2, 0) != -1;
+      bool rotVecNotPos1 = rotVec.at<double>(2, 0) != 1;
+      bool rotVecNeg1 = rotVec.at<double>(2, 0) == -1; 
+      if ( rotVecNotNeg1 && rotVecNotNeg1) {
+          pit = -1 * sin(rotVec.at<double>(2, 0));
+          roll = atan2(rotVec.at<double>(2, 1) / cos(pit), rotVec.at<double>(2, 2) / cos(pit));
+          yaw = atan2(rotVec.at<double>(1, 0) / cos(pit), rotVec.at<double>(0, 0) / cos(pit));
+      } else {
+        yaw = 0;
+        if(rotVecNeg1) {
+            roll = yaw + atan2(rotVec.at<double>(0, 1), rotVec.at<double>(0, 2));
+            pit = pi/2;
+        } else {
+            roll = (-1 * yaw) + atan2((rotVec.at<double>(0, 1) * -1), (rotVec.at<double>(0, 2) * -1));
+            pit = pi/2;
+        }
       }
-      cv::line(im, img_pts[0], nose_end_point2D[0], cv::Scalar(255, 0, 0), 2);
+
+      // Store yaw, pitch, and roll in DB associated with a framenum..or not. 
+      const char *paramValues[3];
+      char y[10];
+      char p[10];
+      char ro[10];
+      sprintf(y, "%lf", yaw);
+      sprintf(p, "%lf", pit);
+      sprintf(ro, "%lf", roll);
+      remove_newline_from_string(&y[0]);
+      remove_newline_from_string(&p[0]);
+      remove_newline_from_string(&ro[0]);
+      paramValues[0] = &y[0];
+      paramValues[1] = &p[0];
+      paramValues[2] = &ro[0];
+      res = PQexecParams (conn, "INSERT INTO skull (yaw, pitch, roll) VALUES ($1::real, $2::real, $3::real) RETURNING id", 
+        3, NULL, paramValues, NULL, NULL, 0);
+      if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+        cout << "INSERT INTO skull not successful." << endl;
+        cout << "Error Msg: " << PQresultErrorMessage(res) << endl;
+      } else {
+        skull_id = std::stoi(PQgetvalue(res, 0, 0));
+      }
+      PQclear(res);
 
       // EYE DETECTION
 
@@ -250,48 +295,68 @@ int main(int argc, char **argv)
       int leftTop = ildmrks[i].points[38].y() - face.y;
       
       int leftWidth = ildmrks[i].points[39].x() - ildmrks[i].points[36].x();
-      
-      if (leftWidth < 1) 
-      { 
-        leftWidth = 1; 
-      }
+      if (leftWidth < 1) { leftWidth = 1; }
+
       int leftHeight = ildmrks[i].points[41].y() - ildmrks[i].points[38].y();
-      if (leftHeight < 1) 
-      {
-        leftHeight = 1;
-      }
+      if (leftHeight < 1) { leftHeight = 1; }
 
       cv::Rect leftEyeRegion(leftLeft, leftTop, leftWidth, leftHeight);
+      
       int rightWidth = ildmrks[i].points[45].x() - ildmrks[i].points[42].x();
-      if (rightWidth < 1) 
-      {
-          rightWidth = 1;
-      }
+      if (rightWidth < 1) { rightWidth = 1; }
+
       int rightHeight = ildmrks[i].points[46].y() - ildmrks[i].points[43].y();
-      if (rightHeight < 1) 
-      {
-          rightHeight = 1;
-      }
+      if (rightHeight < 1) { rightHeight = 1; }
+
+
       cv::Rect rightEyeRegion(ildmrks[i].points[42].x() - face.x,
                               ildmrks[i].points[43].y() - face.y,
                               rightWidth,
                               rightHeight);
 
-      //-- Find Eye Centers
-      cv::Point leftPupil = findEyeCenter(faceROI, leftEyeRegion);
-      leftPupil.x += leftEyeRegion.x + face.x;
-      leftPupil.y += leftEyeRegion.y + face.y;
 
-      cv::Point rightPupil = findEyeCenter(faceROI, rightEyeRegion);
-      rightPupil.x += rightEyeRegion.x + face.x;
-      rightPupil.y += rightEyeRegion.y + face.y;
+      cv::Point lPupil = findEyeCenter(faceROI, leftEyeRegion);
+      lPupil.x += leftEyeRegion.x + face.x;
+      lPupil.y += leftEyeRegion.y + face.y;
 
-      //-- Store Eye Centers in 68 and 69
-      // Draw these at the end of drawDelTri() when iterating through landmark_data  
-      ildmrks[i].points[70 - 2] = dlib::point(leftPupil.x, leftPupil.y);
-      ildmrks[i].points[70 - 1] = dlib::point(rightPupil.x, rightPupil.y);      
+      cv::Point rPupil = findEyeCenter(faceROI, rightEyeRegion);
+      rPupil.x += rightEyeRegion.x + face.x;
+      rPupil.y += rightEyeRegion.y + face.y;
+
+      // The Left Pupil goes in ildmarks[68]
+      ildmrks[i].points[70 - 2] = dlib::point(lPupil.x, lPupil.y);
+
+      // The Right Pupil goes in ildmarks[69]
+      ildmrks[i].points[70 - 1] = dlib::point(rPupil.x, rPupil.y);       
     }
-    //cout << "Shape Predicting:" << double( clock() - startTime ) / (double)CLOCKS_PER_SEC<< " seconds." << endl;
+
+      // Store the all points in pupilandof 
+    string pointArrayVals = allPoints[0];
+    // I need to iterate over allPoints 
+    for (int q = 1; q < 68; q++) {
+      pointArrayVals += string(",") + allPoints[q];
+    };
+
+    // Getting the pupil points
+    string lpoopstr = string("point(") + std::to_string(ildmrks[i].points[68].x()) + string(",") + std::to_string(ildmrks[i].points[68].y()) + ")";
+    string rpoopstr = string("point(") + std::to_string(ildmrks[i].points[69].x()) + string(",") + std::to_string(ildmrks[i].points[69].y()) + ")";
+    string insertPupilStr = "INSERT INTO pupilandof (leftploc, rightploc, ofd) VALUES (" + lpoopstr + "," + rpoopstr + "," + "ARRAY[" + pointArrayVals +"]) RETURNING id";
+    res = PQexecParams (conn, insertPupilStr.c_str(), 0, NULL, NULL, NULL, NULL, 0);
+    if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+      cout << "INSERT INTO pupilandof not successful." << endl;
+      cout << "Error Msg: " << PQresultErrorMessage(res) << endl;
+    } else {
+      pupilandof_id = std::stoi(PQgetvalue(res, 0, 0));
+    }
+    PQclear(res);
+
+    string insertStillImg = "INSERT INTO stillimg (vidid, framenum, skull_id, pupilandof_id) VALUES (\'"+username+"\'::varchar," + std::to_string(i) + "," + std::to_string(skull_id) + "," + std::to_string(pupilandof_id)+")";
+    res = PQexecParams (conn, insertStillImg.c_str(), 0, NULL, NULL, NULL, NULL, 0);
+    if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+      cout << "INSERT INTO stillimg not successful." << endl;
+      cout << "Error Msg: " << PQresultErrorMessage(res) << endl;
+    } 
+    PQclear(res);
 
     // Draw Delaunay Triangles 
 
@@ -299,62 +364,66 @@ int main(int argc, char **argv)
     face_landmark_list_head = NULL;
     face_landmark_list_head = load_face_landmark_data(ildmrks[i], face_landmark_list_head, i);
     
-
     face_landmark_node *face_landmark_element;
-    cv::Scalar delaunay_color(255,0,0), points_color(0, 255, 0); // Note: delaunay_color and points_color are in BGR (BLUE, GREEN, RED) format
-    cv::Mat srcImg;
-    cv::Size source_image_resolution;    
+    
+    cv::Scalar delaunayClr(255,255,255,255), ptsClr(0,0,0,255), eyeClr(255,0,0,255);
+    cv::Mat srcImg = rgbChannels[2]; 
+    cv::Size srcImgRes;    
 
-    srcImg = rgbChannels[2];
-    if (!srcImg.empty())
-    {
-        source_image_resolution = srcImg.size();
-        cv::Rect rect(0, 0, source_image_resolution.width, source_image_resolution.height);
-        cv::Subdiv2D subdiv(rect);
+    if (!srcImg.empty()) {
+      srcImgRes = srcImg.size();
+      cv::Rect rect(0, 0, srcImgRes.width, srcImgRes.height);
+      cv::Subdiv2D subdiv(rect);
 
+      face_landmark_element = face_landmark_list_head;
+      
+      int cnt = 0;
+      float xCoord, yCoord;
+      while (cnt < 68 && face_landmark_element != NULL) {
+        xCoord = face_landmark_element->x;
+        yCoord = face_landmark_element->y;
 
-        face_landmark_element = face_landmark_list_head;
-        
-        int count = 0;
-        float xCoord, yCoord;
-        while (count < (70 - 2) && face_landmark_element != NULL)
-        {
-            xCoord = face_landmark_element->x;
-            yCoord = face_landmark_element->y;
-            
+        if (xCoord >= srcImgRes.width) { xCoord = srcImgRes.width - 1; }
+        if (yCoord >= srcImgRes.height) { yCoord = srcImgRes.height - 1; }
 
-            if(xCoord >= source_image_resolution.width)
-                xCoord = source_image_resolution.width - 1;
-            if(yCoord >= source_image_resolution.height)
-                yCoord = source_image_resolution.height - 1;
+        // Save x,y coordinates to an array that's gonna be inserted into db
 
-            ++count;
-            subdiv.insert(cv::Point2f(xCoord, yCoord));
-            face_landmark_element = face_landmark_element->next;
-        }
-        
-        draw_delaunay(srcImg, subdiv, delaunay_color);
-        face_landmark_element = face_landmark_list_head;
-        
-        count = 0;
-        while (count < (70 - 2) && face_landmark_element != NULL)
-        {
-            ++count;
-            draw_point(srcImg, cv::Point2f(face_landmark_element->x, face_landmark_element->y), points_color);
-            face_landmark_element = face_landmark_element->next;
-        }
-
-        circle(srcImg, cv::Point2f(face_landmark_element->x, face_landmark_element->y), 5, 1234, 4);
+        subdiv.insert(cv::Point2f(xCoord, yCoord));
         face_landmark_element = face_landmark_element->next;
-        circle(srcImg, cv::Point2f(face_landmark_element->x, face_landmark_element->y), 5, 1234, 4);
+        cnt++;
+      }
+      
+      draw_delaunay(srcImg, subdiv, delaunayClr);
 
-        //scout << "writing to " << output_filename << endl;
-        cv::merge(rgbChannels, srcImg);
-        // Write out the image in /vids/comebacknader_drawn/comebacknader.[still #].jpg
-        imwrite(outputDir + "/" + username + "." + to_string(i) + ".jpg", srcImg);
+      face_landmark_element = face_landmark_list_head;
+      
+      cnt = 0;
+      while (cnt < 68 && face_landmark_element != NULL) {
+        draw_point(srcImg, cv::Point2f(face_landmark_element->x, face_landmark_element->y), ptsClr);
+        face_landmark_element = face_landmark_element->next;
+        cnt++;
+      }
+
+      // Drawing the pupils 
+      circle(srcImg, cv::Point2f(face_landmark_element->x, face_landmark_element->y), 5, eyeClr, 3);
+      face_landmark_element = face_landmark_element->next;
+      circle(srcImg, cv::Point2f(face_landmark_element->x, face_landmark_element->y), 5, eyeClr, 3);
+      
+      // Clean up the pointers
+      while (face_landmark_list_head != NULL) {
+        face_landmark_element = face_landmark_list_head;
+        face_landmark_list_head = face_landmark_list_head->next;
+        free (face_landmark_element);
+        face_landmark_element = NULL;
+      }
+      cv::merge(rgbChannels, srcImg);
+      // Write out the image in /vids/comebacknader_drawn/[username].[still #].jpg
+      imwrite(outputDir + "/" + username + "." + to_string(i) + ".jpg", srcImg);
     }
+    // cout << "processing one image took: " << double( clock() - sTime ) / (double)CLOCKS_PER_SEC << " seconds." << endl;
     // END ANALYZING/DRAWING ONE IMAGE 
   }
+  cout << "Pocessing Time: " << double( clock() - startTime ) / (double)CLOCKS_PER_SEC << " seconds." << endl;
   cout << "End Analyzing Frames." << endl;
   cout << "Closing Database." << endl;  
   // Close connection to DB and cleanup

@@ -1,6 +1,6 @@
 #!/bin/bash
 ng build --deploy-url assets/js
 cp delaunayexample.jpg delaunayexample-prod.jpg
-cp TEST_VIDEO.mp4 TEST_VIDEO_prod.mp4
+cp movie.mp4 movie_prod.mp4
 mv delaunayexample-prod.jpg dist
-mv TEST_VIDEO_prod.mp4 dist
+mv movie_prod.mp4 dist

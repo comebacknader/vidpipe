@@ -141,17 +141,22 @@ func UploadVid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 	// Check if the folder exists
 
-	// If it does, don't make dir
+	// If it does, delete both still and output directories
 	if _, err := os.Stat(stillPath); err == nil {
 		// stillPath does exist
-		// Deleting the folder
+		// Deleting the folders
 		delStillPath := exec.Command("rm", "-rf", stillPath)
 		_, err = delStillPath.Output()
 		if err != nil {
 			fmt.Println("Error deleting still path: " + err.Error())
 			return
 		}
-
+		delVidStillPath := exec.Command("rm", "-rf", outputDirPath)
+		_, err = delVidStillPath.Output()
+		if err != nil {
+			fmt.Println("Error deleting drawn stills dir: " + err.Error())
+			return
+		}
 	}
 	// If it doesn't, mkdir
 	if _, err := os.Stat(stillPath); os.IsNotExist(err) {

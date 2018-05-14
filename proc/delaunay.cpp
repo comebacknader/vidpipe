@@ -12,25 +12,22 @@
 #include <math.h>
 
 #include "findEyeCenter.h"
-#include "eyelike.h"
+#include "delaunay.h"
 #include "constants.h"
 
 using namespace std;
 using namespace cv;
 using namespace dlib;
 
-cv::Point2f toCv(const point& p)
-{
+cv::Point2f toCVpoint(const dlib::point& p) {
     return cv::Point2f(p.x(), p.y());
 }
 
-void draw_point(cv::Mat &img, cv::Point2f fp, cv::Scalar color)
-{
+void draw_point(cv::Mat &img, cv::Point2f fp, cv::Scalar color) {
   circle (img, fp, 3, color, CV_FILLED, CV_AA, 0);
 }
 
-void draw_delaunay(cv::Mat &img, cv::Subdiv2D &subdiv, cv::Scalar delaunay_color)
-{
+void draw_delaunay(cv::Mat &img, cv::Subdiv2D &subdiv, cv::Scalar delaunay_color) {
   std::vector<cv::Vec6f> triangleList;
   subdiv.getTriangleList(triangleList);
   std::vector<cv::Point> pt(3);
@@ -83,7 +80,7 @@ face_landmark_node * add_face_landmark_element (face_landmark_node *face_landmar
   return face_landmark_list_head;
 }
 
-face_landmark_node * load_face_landmark_data(landmark_data lmrks, face_landmark_node* face_landmark_list_head, int frame){
+face_landmark_node * load_face_landmark_data(lmarkData lmrks, face_landmark_node* face_landmark_list_head, int frame){
     for (int i = 0; i < NUMBER_OF_LANDMARKS; i++){
         face_landmark_list_head = add_face_landmark_element (face_landmark_list_head,
                                                              frame,
@@ -91,4 +88,12 @@ face_landmark_node * load_face_landmark_data(landmark_data lmrks, face_landmark_
                                                              lmrks.points[i].x(), lmrks.points[i].y());
     }
     return face_landmark_list_head;
+}
+void remove_newline_from_string (char *input_string) {
+	char *byte;
+	if (input_string != NULL) {
+		if ((byte = strchr(input_string, '\n')) != NULL){
+			*byte = '\0';
+		}
+	}
 }

@@ -35,6 +35,7 @@ func IsLoggedIn(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	usrname, loggedIn := AlreadyLoggedIn(r)
 
 	if loggedIn == false {
+		fmt.Println("User is not logged in.")
 		http.Error(w, http.StatusText(405), http.StatusMethodNotAllowed)
 		return
 	}
@@ -42,7 +43,7 @@ func IsLoggedIn(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	// Write the username back to the client in a json object
 	lgInfo := LoginInfo{}
 	lgInfo.Username = usrname.(string)
-	fmt.Println("username: " + lgInfo.Username)
+	fmt.Println(lgInfo.Username + " is logged in.")
 	json.NewEncoder(w).Encode(&lgInfo)
 	return
 
@@ -195,7 +196,7 @@ func PostLogout(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		HttpOnly: true,
 	}
 	http.SetCookie(w, expCook)
-	fmt.Println("Cookie: " + cookie.Value)
+	fmt.Println("User logged out of the app.")
 	models.DelSessionByUUID(cookie.Value)
 	return
 }

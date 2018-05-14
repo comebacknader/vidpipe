@@ -1,6 +1,9 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
+import {Subject} from 'rxjs/Subject';
+import {BehaviorSubject} from 'rxjs/BehaviorSubject';
+
 
 @Injectable()
 export class AuthService {
@@ -8,8 +11,9 @@ export class AuthService {
 	loginURL = 'http://localhost:8080/api/login';
 	logoutURL = 'http://localhost:8080/api/logout';
 	isAuthURL = 'http://localhost:8080/api/isLoggedIn';
-	isAuth = false;
 	username = '';
+	isAuth = new BehaviorSubject<boolean>(false);
+	isAuth$ = this.isAuth.asObservable();
 
 	constructor(private http: HttpClient, private router: Router) {}
 
@@ -28,10 +32,10 @@ export class AuthService {
 
 	checkAuth() {
 		this.http.get(this.isAuthURL).subscribe(data => {
-			this.isAuth = true;
+			this.isAuth.next(true);
 			this.username = data['username'];
 		}, error => {
-			this.isAuth = false;
+			this.isAuth.next(false);
 		});		
 	}
 
@@ -39,9 +43,14 @@ export class AuthService {
 		// Check the cookie, for a session
 		//var cookie = this.getCookie("session");
 		//if (cookie != "") return true; 
-		if (this.isAuth) return true;
+		if (this.isAuth.getValue()) return true;
 		this.router.navigate(['/']);
 		return false;		
+	}
+
+	isLoggedIn() {
+		if (this.isAuth) return true;
+		return false;
 	}
 
 	 getCookie(cname) {
@@ -61,6 +70,7 @@ export class AuthService {
 
 	getUsername() {
 		return this.username;
-	}	
+	}
+
 
 }
